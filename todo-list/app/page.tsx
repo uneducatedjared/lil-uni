@@ -13,10 +13,8 @@ export default function Page() {
     <main className="container">
       <header className="header">
         <div className="brand">
-          <div className="avatar">🌈</div>
-          <h1>My Tasks</h1>
+          <h1>My TODOs</h1>
         </div>
-        <div className="controls-right">Sort</div>
       </header>
 
       <TaskList />

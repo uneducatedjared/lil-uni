@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef} from 'react';
 import { Task, Category } from '../types/task';
 import TaskItem from './TaskItem';
 import * as db from '../lib/db';
@@ -13,10 +13,11 @@ export default function TaskList({ initialCategory = 'All' }: Props) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [category, setCategory] = useState<Category>(initialCategory);
   const [sortBy, setSortBy] = useState<'created' | 'due' | 'priority'>('created');
+  const [isSortDropdownOpen, setSortDropdownOpen] = useState(false);
+  const sortDropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     load();
-
     function onReload() {
       load();
     }
@@ -26,6 +27,20 @@ export default function TaskList({ initialCategory = 'All' }: Props) {
       clearAllReminders();
     };
   }, []);
+
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (sortDropdownRef.current && !sortDropdownRef.current.contains(event.target as Node)) {
+        setSortDropdownOpen(false);
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [sortDropdownRef]);
 
   async function load() {
     const all = await db.getAllTasks();
@@ -87,13 +102,38 @@ export default function TaskList({ initialCategory = 'All' }: Props) {
             </button>
           ))}
         </div>
-        <div className="sort">
-          <label>Sort</label>
-          <select value={sortBy} onChange={(e) => setSortBy(e.target.value as any)}>
-            <option value="created">Newest</option>
-            <option value="due">Due date</option>
-            <option value="priority">Priority</option>
-          </select>
+        <div className="custom-dropdown-container" ref={sortDropdownRef}>
+          <button className="sort-trigger" onClick={() => setSortDropdownOpen(!isSortDropdownOpen)}>
+            <span className="sort-icon">⇅</span> Sort
+          </button>
+          {isSortDropdownOpen && (
+            <div className="dropdown-menu">
+              <button
+                onClick={() => {
+                  setSortBy('created');
+                  setSortDropdownOpen(false);
+                }}
+              >
+                Created date
+              </button>
+              <button
+                onClick={() => {
+                  setSortBy('due');
+                  setSortDropdownOpen(false);
+                }}
+              >
+                Due date
+              </button>
+              <button
+                onClick={() => {
+                  setSortBy('priority');
+                  setSortDropdownOpen(false);
+                }}
+              >
+                Priority
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
