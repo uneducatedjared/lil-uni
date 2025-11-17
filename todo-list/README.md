@@ -1,3 +1,34 @@
+# Todo List (Next.js + idb)
+
+This project is a minimal Next.js 13+ app that stores tasks in the browser's IndexedDB using `idb`.
+
+Features implemented:
+- Add task (title required, description optional)
+- Delete task
+- Toggle complete/incomplete
+- View list, filter by category, sort by due/priority
+- Data persisted in IndexedDB (`lib/db.ts`)
+- Basic UI matching provided mockups
+
+Local setup
+
+1. Install dependencies
+
+```powershell
+cd todo-list
+npm install
+# or: pnpm install
+```
+
+2. Run dev server
+
+```powershell
+npm run dev
+```
+
+Notes
+- The `config/feature-flags.json` contains a placeholder flag `claudeHaiku4_5` set to `true` per request.
+- Browser Notifications/Service Worker reminders are not fully implemented; you can add Service Worker logic to trigger notifications for `task.reminder`.
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started
