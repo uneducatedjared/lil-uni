@@ -74,6 +74,9 @@ export default function TaskList({ initialCategory = '全部' }: Props) {
   const filtered = tasks.filter((t) => category === '全部' || t.category === category);
 
   const sorted = filtered.sort((a, b) => {
+    if (a.completed !== b.completed) {
+      return a.completed ? 1 : -1;
+    }
     if (sortBy === 'due') {
       const da = a.dueDate ? +new Date(a.dueDate) : Infinity;
       const dbb = b.dueDate ? +new Date(b.dueDate) : Infinity;

@@ -3,32 +3,34 @@ import React, { useEffect, useState } from 'react';
 import { Task } from '../types/task';
 import * as db from '../lib/db';
 import { v4 as uuidv4 } from 'uuid';
+import { formatToDatetimeLocal, toISOStringFromLocal } from '../lib/utils';
 
-type Props = {};
+const ONE_HOUR_MS = 1000 * 60 * 60;
+const ONE_DAY_MS = 24 * ONE_HOUR_MS;
+const THIRTY_MINUTES_MS = 30 * 60 * 1000;
 
-export default function TaskModal(_: Props) {
-  const [open, setOpen] = useState(false);
-  const [task, setTask] = useState<Partial<Task> | null>(null);
-  const [reminderEnabled, setReminderEnabled] = useState(false);
+export default function TaskModal() {
+  const [open, setOpen] = useState<boolean>(false);
+  const [task, setTask] = useState<Task | null>(null);
+  const [reminderEnabled, setReminderEnabled] = useState<boolean>(false);
   const [reminderOption, setReminderOption] = useState<'1h' | '1d'>('1h');
 
   useEffect(() => {
-    function handler(e: any) {
-      const detail = e?.detail;
-      const base = { priority: '中', category: '其他' };
+    function handler(e: Event) {
+      const detail = (e as CustomEvent<Task>).detail;
+      const base = { priority: '中' as const, category: '其他' as const };
       const initial = detail == null ? base : { ...base, ...detail };
+      
       // determine reminder state from provided detail (if any)
-      if (initial.reminder && initial.dueDate) {
+      if (detail?.reminder && detail?.dueDate) {
         try {
-          const due = +new Date(initial.dueDate);
-          const rem = +new Date(initial.reminder);
+          const due = +new Date(detail?.dueDate);
+          const rem = +new Date(detail?.reminder);
           const diff = due - rem;
-          if (diff > 0 && Math.abs(diff - 1000 * 60 * 60) < 1000 * 60 * 30) {
-            // ~1 hour before
+          if (diff > 0 && Math.abs(diff - ONE_HOUR_MS) < THIRTY_MINUTES_MS) {
             setReminderOption('1h');
             setReminderEnabled(true);
-          } else if (diff > 0 && Math.abs(diff - 1000 * 60 * 60 * 24) < 1000 * 60 * 30) {
-            // ~1 day before
+          } else if (diff > 0 && Math.abs(diff - ONE_DAY_MS) < THIRTY_MINUTES_MS) {
             setReminderOption('1d');
             setReminderEnabled(true);
           } else {
@@ -40,22 +42,26 @@ export default function TaskModal(_: Props) {
       } else {
         setReminderEnabled(false);
       }
+
       // normalize category if it's lowercased previously
       if (initial && typeof initial.category === 'string') {
-        const cat = initial.category;
-        const mapping: Record<string, string> = {
-          work: 'Work',
-          study: 'Study',
-          life: 'Life',
-          others: 'Others',
+        const cat = initial.category.toLowerCase();
+        const mapping: Record<string, Task['category']> = {
+          work: '工作',
+          study: '学习',
+          life: '生活',
+          others: '其他',
         };
-        if (mapping[cat]) initial.category = mapping[cat];
+        if (mapping[cat]) {
+          initial.category = mapping[cat];
+        }
       }
-      setTask(initial);
+
+      setTask(initial as Task);
       setOpen(true);
     }
-    window.addEventListener('open-task', handler as any);
-    return () => window.removeEventListener('open-task', handler as any);
+    window.addEventListener('open-task', handler);
+    return () => window.removeEventListener('open-task', handler);
   }, []);
 
   function close() {
@@ -66,12 +72,13 @@ export default function TaskModal(_: Props) {
   async function save() {
     if (!task || !task.title) return;
     const now = new Date().toISOString();
+    
     // compute reminder datetime if enabled and dueDate exists
     let computedReminder: string | null = null;
     if (reminderEnabled && task.dueDate) {
       try {
-        const dueMs = +new Date(task.dueDate as string);
-        const offset = reminderOption === '1h' ? 1000 * 60 * 60 : 1000 * 60 * 60 * 24;
+        const dueMs = +new Date(task.dueDate);
+        const offset = reminderOption === '1h' ? ONE_HOUR_MS : ONE_DAY_MS;
         const when = new Date(dueMs - offset);
         computedReminder = when.toISOString();
       } catch (e) {
@@ -80,49 +87,23 @@ export default function TaskModal(_: Props) {
     }
 
     const newTask: Task = {
-      id: (task as any).id || uuidv4(),
-      title: task.title!,
+      id: task.id || uuidv4(),
+      title: task.title,
       description: task.description || '',
-      category: (task.category as any) || '其他',
-      priority: (task.priority as any) || '中',
+      category: task.category || '其他',
+      priority: task.priority || '中',
       dueDate: task.dueDate || null,
       reminder: computedReminder,
       completed: !!task.completed,
-      createdAt: (task as any).createdAt || now,
+      createdAt: task.createdAt || now,
     };
+
     await db.addTask(newTask);
     close();
     window.dispatchEvent(new CustomEvent('reload-tasks'));
   }
 
-  // helper: convert ISO string (UTC) to `datetime-local` local string "YYYY-MM-DDTHH:MM"
-  function formatToDatetimeLocal(iso: string) {
-    try {
-      const d = new Date(iso);
-      if (isNaN(+d)) return '';
-      const year = d.getFullYear();
-      const month = String(d.getMonth() + 1).padStart(2, '0');
-      const day = String(d.getDate()).padStart(2, '0');
-      const hours = String(d.getHours()).padStart(2, '0');
-      const minutes = String(d.getMinutes()).padStart(2, '0');
-      return `${year}-${month}-${day}T${hours}:${minutes}`;
-    } catch (e) {
-      return '';
-    }
-  }
-
-  // helper: convert `datetime-local` value (local) to ISO string (UTC)
-  function toISOStringFromLocal(localValue: string) {
-    try {
-      if (!localValue) return '';
-      const d = new Date(localValue);
-      return d.toISOString();
-    } catch (e) {
-      return '';
-    }
-  }
-
-  if (!open) return null;
+  if (!open || !task) return null;
 
   return (
     <div className="modal-backdrop" onClick={close}>
@@ -136,7 +117,7 @@ export default function TaskModal(_: Props) {
             className="modal-title-input"
             placeholder="Title"
             aria-label="Task title"
-            value={task?.title || ''}
+            value={task.title || ''}
             onChange={(e) => setTask({ ...task, title: e.target.value })}
           />
           <textarea
@@ -144,7 +125,7 @@ export default function TaskModal(_: Props) {
             placeholder="Add more details..."
             aria-label="Task description"
             rows={3}
-            value={task?.description || ''}
+            value={task.description || ''}
             onChange={(e) => setTask({ ...task, description: e.target.value })}
           />
         </div>
@@ -155,8 +136,8 @@ export default function TaskModal(_: Props) {
               <span className="meta-label">优先级</span>
               <select
                 className="meta-value"
-                value={task?.priority || '中'}
-                onChange={(e) => setTask({ ...task, priority: e.target.value as any })}
+                value={task.priority || '中'}
+                onChange={(e) => setTask({ ...task, priority: e.target.value as Task['priority'] })}
                 aria-label="Priority"
               >
                 <option value="低">低</option>
@@ -169,8 +150,8 @@ export default function TaskModal(_: Props) {
               <span className="meta-label">类别</span>
               <select
                 className="meta-value"
-                value={task?.category || '其他'}
-                onChange={(e) => setTask({ ...task, category: e.target.value as any })}
+                value={task.category || '其他'}
+                onChange={(e) => setTask({ ...task, category: e.target.value as Task['category'] })}
                 aria-label="Category"
               >
                 <option value="工作">工作</option>
@@ -185,9 +166,7 @@ export default function TaskModal(_: Props) {
               <input
                 className="meta-value"
                 type="datetime-local"
-                value={
-                  task?.dueDate ? formatToDatetimeLocal(task.dueDate as string) : ''
-                }
+                value={task.dueDate ? formatToDatetimeLocal(task.dueDate) : ''}
                 onChange={(e) =>
                   setTask({ ...task, dueDate: toISOStringFromLocal(e.target.value) })
                 }
@@ -197,20 +176,20 @@ export default function TaskModal(_: Props) {
 
             <div className="meta-row">
               <span className="meta-label">提醒</span>
-              <div className="meta-value" style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <input
-                    type="checkbox"
-                    checked={reminderEnabled}
-                    onChange={(e) => setReminderEnabled(e.target.checked)}
-                    aria-label="Enable reminder"
-                  />
-                </label>
+              <div className="meta-value reminder-controls">
+                <input
+                  type="checkbox"
+                  id="reminder-toggle"
+                  checked={reminderEnabled}
+                  onChange={(e) => setReminderEnabled(e.target.checked)}
+                  aria-label="Enable reminder"
+                />
+                <label htmlFor="reminder-toggle" className="toggle-switch"></label>
 
                 {reminderEnabled && (
                   <select
                     value={reminderOption}
-                    onChange={(e) => setReminderOption(e.target.value as any)}
+                    onChange={(e) => setReminderOption(e.target.value as '1h' | '1d')}
                     aria-label="Reminder option"
                   >
                     <option value="1h">1 小时前</option>
@@ -221,14 +200,11 @@ export default function TaskModal(_: Props) {
             </div>
           </div>
         </div>
-
-        <hr className="modal-divider" />
-
         <div className="modal-actions">
           <button className="btn ghost" onClick={close}>
             取消
           </button>
-          <button className="btn primary" onClick={save} disabled={!task?.title}>
+          <button className="btn primary" onClick={save} disabled={!task.title}>
             保存
           </button>
         </div>

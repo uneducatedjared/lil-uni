@@ -51,7 +51,8 @@ export async function scheduleReminders(tasks: Task[]) {
       continue;
     }
     const timeoutId = window.setTimeout(() => {
-      showNotification(`Reminder: ${t.title}`, t.description || '');
+      const whenString = new Date(when).toLocaleString();
+      showNotification(`Reminder: ${t.title} in ${whenString}`, t.description || '');
       timeouts.delete(t.id);
     }, delay);
     timeouts.set(t.id, timeoutId);
