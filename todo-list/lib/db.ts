@@ -48,7 +48,3 @@ export async function deleteTask(id: string): Promise<void> {
   await db.delete(STORE, id);
 }
 
-export async function clearAll(): Promise<void> {
-  const db = await getDB();
-  await db.clear(STORE);
-}

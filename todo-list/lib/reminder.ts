@@ -8,26 +8,33 @@ function showNotification(title: string, body?: string) {
     try {
       new Notification(title, { body });
     } catch (e) {
-      // ignore
+      alert('无法显示通知。请检查浏览器设置。');
     }
   }
 }
 
 export function clearAllReminders() {
-  for (const id of timeouts.keys()) {
-    const t = timeouts.get(id)!;
-    window.clearTimeout(t);
+  for (const timeoutId of timeouts.values()) {
+    window.clearTimeout(timeoutId);
   }
   timeouts.clear();
 }
 
-export function scheduleReminders(tasks: Task[]) {
-  if (typeof window === 'undefined') return;
-  if (!('Notification' in window)) return;
+export async function scheduleReminders(tasks: Task[]) {
+  if (typeof window === 'undefined' || !('Notification' in window)) {
+    return;
+  }
 
-  // request permission if needed
   if (Notification.permission === 'default') {
-    Notification.requestPermission().catch(() => {});
+    await Notification.requestPermission().catch(() => {});
+  }
+
+  if (Notification.permission === 'denied') {
+    const hasAlerted = sessionStorage.getItem('notification-permission-denied');
+    if (!hasAlerted) {
+      alert('您已禁用通知权限。如果需要接收任务提醒，请在浏览器设置中重新开启。');
+      sessionStorage.setItem('notification-permission-denied', 'true');
+    }
   }
 
   clearAllReminders();
@@ -39,8 +46,8 @@ export function scheduleReminders(tasks: Task[]) {
     if (isNaN(when)) continue;
     const delay = when - now;
     if (delay <= 0) {
-      // past — show immediately
-      showNotification(`Reminder: ${t.title}`, t.description || '');
+      const whenString = new Date(when).toLocaleString();
+      showNotification(`Reminder: ${t.title} in ${whenString}`, t.description || '');
       continue;
     }
     const timeoutId = window.setTimeout(() => {

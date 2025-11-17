@@ -13,7 +13,7 @@ export default function Page() {
     <main className="container">
       <header className="header">
         <div className="brand">
-          <h1>My TODOs</h1>
+          <h1>TODOs</h1>
         </div>
       </header>
 

@@ -9,7 +9,7 @@ type Props = {
   initialCategory?: Category;
 };
 
-export default function TaskList({ initialCategory = 'All' }: Props) {
+export default function TaskList({ initialCategory = '全部' }: Props) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [category, setCategory] = useState<Category>(initialCategory);
   const [sortBy, setSortBy] = useState<'created' | 'due' | 'priority'>('created');
@@ -28,6 +28,13 @@ export default function TaskList({ initialCategory = 'All' }: Props) {
     };
   }, []);
 
+  
+  async function load() {
+    const all = await db.getAllTasks();
+    const sortedAll = all.sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
+    setTasks(sortedAll);
+    scheduleReminders(sortedAll);
+  }
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -42,15 +49,7 @@ export default function TaskList({ initialCategory = 'All' }: Props) {
     };
   }, [sortDropdownRef]);
 
-  async function load() {
-    const all = await db.getAllTasks();
-    const sortedAll = all.sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
-    setTasks(sortedAll);
-    // schedule reminders for tasks (best-effort, in-page)
-    scheduleReminders(sortedAll);
-  }
 
-  // ensure we clear reminders when unmounting component
   useEffect(() => {
     return () => clearAllReminders();
   }, []);
@@ -69,11 +68,10 @@ export default function TaskList({ initialCategory = 'All' }: Props) {
   }
 
   function openTask(t: Task) {
-    // simple inspect: open modal via dispatching custom event
     window.dispatchEvent(new CustomEvent('open-task', { detail: t }));
   }
 
-  const filtered = tasks.filter((t) => category === 'All' || t.category === category);
+  const filtered = tasks.filter((t) => category === '全部' || t.category === category);
 
   const sorted = filtered.sort((a, b) => {
     if (sortBy === 'due') {
@@ -82,7 +80,7 @@ export default function TaskList({ initialCategory = 'All' }: Props) {
       return da - dbb;
     }
     if (sortBy === 'priority') {
-      const score = (p?: string) => (p === 'high' ? 1 : p === 'medium' ? 2 : 3);
+      const score = (p?: string) => (p === '高' ? 1 : p === '中' ? 2 : 3);
       return score(a.priority) - score(b.priority);
     }
     return +new Date(b.createdAt) - +new Date(a.createdAt);
@@ -92,7 +90,7 @@ export default function TaskList({ initialCategory = 'All' }: Props) {
     <div>
       <div className="controls">
         <div className="tabs">
-          {['All', 'Work', 'Study', 'Life', 'Others'].map((c) => (
+          {['全部', '工作', '学习', '生活', '其他'].map((c) => (
             <button
               key={c}
               className={c === category ? 'active' : ''}
@@ -104,7 +102,7 @@ export default function TaskList({ initialCategory = 'All' }: Props) {
         </div>
         <div className="custom-dropdown-container" ref={sortDropdownRef}>
           <button className="sort-trigger" onClick={() => setSortDropdownOpen(!isSortDropdownOpen)}>
-            <span className="sort-icon">⇅</span> Sort
+            <span className="sort-icon">⇅</span> 排序
           </button>
           {isSortDropdownOpen && (
             <div className="dropdown-menu">
@@ -114,7 +112,7 @@ export default function TaskList({ initialCategory = 'All' }: Props) {
                   setSortDropdownOpen(false);
                 }}
               >
-                Created date
+                创建时间
               </button>
               <button
                 onClick={() => {
@@ -122,7 +120,7 @@ export default function TaskList({ initialCategory = 'All' }: Props) {
                   setSortDropdownOpen(false);
                 }}
               >
-                Due date
+                截至日期
               </button>
               <button
                 onClick={() => {
@@ -130,7 +128,7 @@ export default function TaskList({ initialCategory = 'All' }: Props) {
                   setSortDropdownOpen(false);
                 }}
               >
-                Priority
+                优先级
               </button>
             </div>
           )}
@@ -141,7 +139,7 @@ export default function TaskList({ initialCategory = 'All' }: Props) {
         {sorted.map((t) => (
           <TaskItem key={t.id} task={t} onToggle={handleToggle} onDelete={handleDelete} onOpen={openTask} />
         ))}
-        {sorted.length === 0 && <div className="empty">No tasks yet — press + to add one</div>}
+        {sorted.length === 0 && <div className="empty">暂无任务 — 点击 + 添加</div>}
       </div>
     </div>
   );

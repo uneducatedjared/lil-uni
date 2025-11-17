@@ -163,14 +163,97 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
+  z-index: 100;
 }
 
 .modal {
-  width: 720px;
+  width: 100%;
+  max-width: 500px; /* Narrower modal */
   background: var(--card);
-  padding: 28px;
-  border-radius: var(--radius-md);
+  padding: 24px;
+  border-radius: var(--radius-lg); /* More rounded corners */
   box-shadow: var(--shadow-lg);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.modal-close-btn {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: transparent;
+  border: none;
+  font-size: 24px;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.modal-header {
+  padding-right: 24px; /* Space for the close button */
+}
+.modal-title-input {
+  font-size: 22px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+.modal-desc-input {
+  font-size: 14px;
+  color: var(--muted);
+  resize: none;
+  font-family: inherit;
+}
+.modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.meta-row {
+  display: flex;
+  align-items: center;
+  font-size: 14px;
+}
+
+.meta-icon {
+  margin-right: 12px;
+  color: var(--muted);
+}
+
+.meta-label {
+  color: var(--accent);
+}
+
+.meta-value {
+  margin-left: auto;
+  text-align: right;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--accent);
+  font-family: inherit;
+  font-size: inherit;
+  cursor: pointer;
+}
+
+/* Ensure native date/time pickers are available again */
+.modal input[type="date"],
+.modal input[type="time"] {
+  -webkit-appearance: auto;
+  appearance: auto;
+}
+
+.modal-divider {
+  border: none;
+  border-top: 1px solid var(--border-color);
+  margin: 0;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
 }
 
 .modal input,
@@ -289,4 +372,42 @@ body {
 
 .dropdown-menu button:hover {
   background-color: var(--bg);
+}
+
+/* Modal improvements: responsive grid for meta controls and nicer selects */
+.modal-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+@media (max-width: 520px) {
+  .modal {
+    margin: 16px;
+    max-width: calc(100% - 32px);
+  }
+  .modal-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.modal select {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  padding: 10px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--accent);
+}
+
+.meta-value {
+  margin-left: 12px; /* align nicely in grid */
+  min-width: 120px;
+}
+
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
